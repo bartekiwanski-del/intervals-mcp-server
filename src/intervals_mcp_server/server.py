@@ -86,6 +86,12 @@ from intervals_mcp_server.tools.events import (  # pylint: disable=wrong-import-
     get_events,
 )
 from intervals_mcp_server.tools.gear import get_gear_list  # pylint: disable=wrong-import-position  # noqa: E402
+from intervals_mcp_server.tools.heart_rate import (  # noqa: E402
+    analyze_activity_heart_rate,
+    download_activity_fit,
+    find_heart_rate_peaks,
+    get_activity_stream_data,
+)
 from intervals_mcp_server.tools.wellness import get_wellness_data  # pylint: disable=wrong-import-position  # noqa: E402
 from intervals_mcp_server.tools.power_curves import get_athlete_power_curves  # pylint: disable=wrong-import-position  # noqa: E402
 from intervals_mcp_server.tools.custom_items import (  # pylint: disable=wrong-import-position  # noqa: E402
@@ -107,6 +113,11 @@ __all__ = [
     "get_activity_intervals",
     "get_activity_messages",
     "get_activity_streams",
+    "get_activity_stream_data",
+    "download_activity_fit",
+    "analyze_activity_heart_rate",
+    "find_heart_rate_peaks",
+    "get_gear_list",
     "get_events",
     "get_event_by_id",
     "delete_event",

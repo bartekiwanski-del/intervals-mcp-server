@@ -32,6 +32,12 @@ from intervals_mcp_server.tools.power_curves import (  # noqa: F401
     get_athlete_power_curves,
 )
 from intervals_mcp_server.tools.gear import get_gear_list  # noqa: F401
+from intervals_mcp_server.tools.heart_rate import (
+    analyze_activity_heart_rate,
+    download_activity_fit,
+    find_heart_rate_peaks,
+    get_activity_stream_data,
+)
 from intervals_mcp_server.tools.wellness import get_wellness_data  # noqa: F401
 
 
@@ -57,6 +63,10 @@ __all__ = [
     "get_activity_details",
     "get_activity_intervals",
     "get_activity_streams",
+    "get_activity_stream_data",
+    "download_activity_fit",
+    "analyze_activity_heart_rate",
+    "find_heart_rate_peaks",
     "get_events",
     "get_event_by_id",
     "delete_event",
