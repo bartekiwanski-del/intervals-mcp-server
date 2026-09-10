@@ -74,6 +74,11 @@ def test_get_activities(monkeypatch):
     monkeypatch.setattr(
         "intervals_mcp_server.tools.activities.make_intervals_request", fake_request
     )
+    # Gear resolution also calls the API; this unit test must never use the network.
+    async def fake_gear_request(*_args, **_kwargs):
+        return []
+
+    monkeypatch.setattr(gear_module, "make_intervals_request", fake_gear_request)
     result = asyncio.run(get_activities(athlete_id="1", limit=1, include_unnamed=True))
     assert "Morning Ride" in result
     assert "Activities:" in result

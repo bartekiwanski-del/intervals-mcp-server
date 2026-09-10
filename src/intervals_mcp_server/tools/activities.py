@@ -259,8 +259,9 @@ async def get_activity_streams(
 ) -> str:
     """Get stream data for a specific activity from Intervals.icu
 
-    This endpoint returns time-series data for an activity, including metrics like power, heart rate,
-    cadence, altitude, distance, temperature, and velocity data.
+    Returns only a preview (first/last samples), not a complete trace. Use
+    get_activity_stream_data for all samples or analyze_activity_heart_rate for
+    peaks anywhere in the activity, including values corrected by Intervals.icu.
 
     Args:
         activity_id: The Intervals.icu activity ID
@@ -300,6 +301,7 @@ async def get_activity_streams(
 
     # Format the streams data
     streams_summary = f"Activity Streams for {activity_id}:\n\n"
+    streams_summary += "Preview only. Use get_activity_stream_data for all samples or analyze_activity_heart_rate for peak analysis.\n\n"
 
     for stream in streams:
         if not isinstance(stream, dict):

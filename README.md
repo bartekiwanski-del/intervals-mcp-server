@@ -2,6 +2,91 @@
 
 Model Context Protocol (MCP) server for connecting Claude and ChatGPT with the Intervals.icu API. It provides tools for authentication and data retrieval for activities, events, wellness data, power curves, and custom items.
 
+## Original FIT and raw heart-rate peaks
+
+Four read-only tools support complete traces and peaks that activity summaries may hide:
+
+| Tool | Purpose |
+| --- | --- |
+| `analyze_activity_heart_rate` | Analyze every HR record in the original FIT (default), or the full raw API stream. Return maximum, peak time, samples and estimated seconds above a threshold, and episodes. |
+| `find_heart_rate_peaks` | Scan running/cycling activities in an inclusive date range. Never filter by the corrected summary HR maximum. Report unavailable activities separately. |
+| `get_activity_stream_data` | Return actual timestamp-aligned arrays in pages, preserving missing values. |
+| `download_activity_fit` | Transfer the original FIT as base64 chunks with a SHA-256 checksum. No public download links or remote filesystem paths. |
+
+Examples of tool arguments (normal configured authentication is reused):
+
+```json
+{"activity_id":"i123","threshold":185,"source":"original_fit"}
+```
+
+Use the above with `analyze_activity_heart_rate`. To find activities across a year,
+call `find_heart_rate_peaks` with, for example:
+
+```json
+{"start_date":"2026-01-01","end_date":"2026-12-31","threshold":185,"limit":10}
+```
+
+Continue with each response's `next_offset` as `offset`, preserving all arguments
+and passing its `inventory_sha256`. Accumulate `matches` and `unavailable` across
+**every** page. The inventory includes other sports and ID-only records so that
+missing access is visible. Counts other than `inventory_count` apply to that page.
+An inventory change returns an error requiring a restart; a page with no matches
+does not establish that the entire period has none.
+
+### Interpretation and completeness
+
+- The threshold is **strictly greater than** (`>185`, not `>=185`). Isolated peaks
+  are retained; the tools do not remove suspected artefacts or diagnose them.
+- `source="original_fit"` uses `/activity/{id}/file`. It never substitutes the
+  generated/edited `/fit-file`. `source="streams"` uses `time,heartrate` from
+  `/streams.json`; that raw API stream can reflect user edits.
+- FIT peak/episode times are seconds from the **first FIT record**, with its full
+  timestamp returned as `first_record_timestamp`. They are not assumed to be
+  seconds from the calendar start or moving time. API stream times retain their
+  original time origin.
+- Durations are estimates using left-held HR between adjacent valid samples.
+  Missing HR and gaps over 10 seconds (configurable per activity) split episodes
+  and are excluded from duration coverage. The last sample has no inferred tail.
+  Therefore a single recorded peak can have zero estimated duration.
+- The full trace is analyzed even when the episode list is paginated. Follow
+  `next_episode_offset` to retrieve all episodes; scan results include only the
+  first episode per activity, plus full-trace metrics and total episode count.
+- No HR, API errors, restricted/ID-only activities, non-FIT originals and corrupt
+  FIT files are reported explicitly. They are never counted as workouts without
+  peaks. A successful trace only establishes what the recording contains.
+- Files are limited to 32 MiB both compressed and decompressed, and analysis to
+  500,000 FIT records. Exceeding a limit returns an error; it never truncates analysis.
+
+### Downloading a complete FIT
+
+Call `download_activity_fit` with an activity ID. Decode `data_base64` on **each**
+page separately, concatenate the bytes in `offset` order, and follow `next_offset`
+until null. Pass the first page's `sha256` as `expected_sha256` on subsequent calls
+to detect a changed original. Verify the final byte count and SHA-256 before saving
+as the returned filename. The default chunk is 32 KiB (maximum 64 KiB). Gzip is
+removed; the returned bytes are the original FIT. Files are not retained by the server.
+
+### Updating an existing hosted server
+
+1. Review and merge the extension into the branch used by the existing service.
+2. Redeploy that service using its current build/start commands. Install the updated
+   dependencies, including `fitdecode` (`uv sync --locked --all-extras` locally).
+3. Refresh the MCP tool list in the client (reconnect/reload the plugin if needed)
+   and confirm the four new tools are advertised. The MCP endpoint, transport and
+   `API_KEY`/`ATHLETE_ID` settings remain the same.
+4. Run `analyze_activity_heart_rate` on a known corrected activity and compare its
+   raw peak with the original FIT before scanning a larger period.
+
+Local validation: `uv run pytest`, `uv run ruff check .`, `uv run mypy src tests`.
+Tests use synthetic, CRC-valid FIT files and mocked HTTP only. They cover clipped
+summary maxima, timestamp gaps, nulls, chunk reconstruction, pagination and API errors.
+
+API restrictions on activities obtained only through Strava remain in force. An
+original-file download does not remove those restrictions. See the official
+[API cookbook](https://forum.intervals.icu/t/intervals-icu-api-integration-cookbook/80090),
+[raw versus corrected HR discussion](https://forum.intervals.icu/t/solved-more-easily-identify-all-workouts-with-a-corrected-heart-rate-ans-custom-field/124346),
+and [Strava API limitation](https://forum.intervals.icu/t/solved-mcp-server-for-coaches-via-api-do-not-see-athletes-activities-brought-from-strava-ans-strava-api-forbids-data-fowarding/113828).
+
 If you find the Model Context Protocol (MCP) server useful, please consider supporting its continued development with a donation.
 
 ## Requirements
