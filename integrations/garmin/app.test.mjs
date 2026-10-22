@@ -122,6 +122,7 @@ test('owner approval requires the password, browser cookie and correct origin', 
   assert.equal((await approve(handle, login, 'wrong-password')).status, 401);
   assert.equal((await approve(handle, login, CONFIG.password, {cookie:''})).status, 400);
   assert.equal((await approve(handle, login, CONFIG.password, {origin:'https://attacker.example'})).status, 403);
+  assert.equal((await approve(handle, login, CONFIG.password, {origin:'null'})).status, 403);
   assert.equal((await approve(handle, login)).status, 303);
   assert.equal((await approve(handle, login)).status, 400);
 });

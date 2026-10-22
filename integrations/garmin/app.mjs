@@ -28,7 +28,9 @@ const securityHeaders = {
   'cache-control': 'no-store',
   'pragma': 'no-cache',
   'x-content-type-options': 'nosniff',
-  'referrer-policy': 'no-referrer',
+  // no-referrer makes browser form POSTs send Origin: null, breaking the CSRF check.
+  // same-origin preserves that check and omits referrers on the ChatGPT redirect.
+  'referrer-policy': 'same-origin',
   'x-frame-options': 'DENY',
   'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; form-action 'self' https://chatgpt.com; frame-ancestors 'none'; base-uri 'none'",
 };
