@@ -20,4 +20,11 @@ This project is a Python 3.12 backend service built with FastMCP and httpx. All 
 - Title pull requests using the format `[intervals-mcp-server] <brief description>`.
 - Describe any manual testing steps performed and mention whether `pytest`, `ruff`, and `mypy` passed.
 
-There is currently no frontend code in this repository. If a frontend is added in the future (for example with React or another framework), document how to run and test it within this file.
+The Python service has no standalone frontend. Document how to run and test any additional frontend code within this file.
+
+## Garmin integration
+`integrations/garmin` is an independent Node.js service with a server-rendered OAuth
+login form. It is deployed separately from the Python Intervals service. From that
+directory run `npm ci --ignore-scripts`, `npm run check`, and `npm test`. Start it
+with `npm start` after setting the environment variables documented in its README.
+The Python verification commands above continue to apply to repository commits.
