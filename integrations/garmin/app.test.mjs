@@ -64,6 +64,23 @@ test('missing or placeholder secrets close data and authorization endpoints', as
     }
   }
 });
+test('configuration diagnostics identify invalid fields without returning secrets', async () => {
+  for (const [password, issue] of [
+    ['', {field:'MCP_LOGIN_PASSWORD',reason:'not_set'}],
+    ['__SET_IN_RENDER__', {field:'MCP_LOGIN_PASSWORD',reason:'not_set'}],
+    ['short-password', {field:'MCP_LOGIN_PASSWORD',reason:'too_short',minimum:16}],
+    ['x'.repeat(257), {field:'MCP_LOGIN_PASSWORD',reason:'too_long',maximum:256}],
+  ]) {
+    const response = await app({...CONFIG,password})(request('/readyz'));
+    assert.equal(response.status,503);
+    const body = await response.text();
+    assert.deepEqual(JSON.parse(body), {ready:false,issues:[issue]});
+    for (const secret of [password,CONFIG.garminKey,CONFIG.signingKey].filter(Boolean)) assert.equal(body.includes(secret),false);
+  }
+  const response = await app()(request('/readyz'));
+  assert.equal(response.status,200);
+  assert.deepEqual(await response.json(),{ready:true,issues:[]});
+});
 test('OAuth metadata publishes PKCE, issuer identification and the exact resource', async () => {
   const handle = app();
   const auth = await (await handle(request('/.well-known/oauth-authorization-server'))).json();

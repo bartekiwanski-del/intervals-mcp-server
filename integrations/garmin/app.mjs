@@ -9,7 +9,20 @@ const random = () => randomBytes(32).toString('base64url');
 const hash = (value) => createHash('sha256').update(value).digest('base64url');
 const equal = (a, b) => timingSafeEqual(createHash('sha256').update(String(a)).digest(), createHash('sha256').update(String(b)).digest());
 const escape = (value) => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[c]));
-const validSecret = (value, length) => typeof value === 'string' && value.length >= length && !value.startsWith('__SET_');
+
+function configurationIssues(config) {
+  const fields = [
+    ['MCP_SIGNING_KEY', config.signingKey, 40],
+    ['MCP_LOGIN_PASSWORD', config.password, 16, 256],
+    ['GARMIN_PERSONAL_API_KEY', config.garminKey, 10],
+  ];
+  return fields.flatMap(([field, value, minimum, maximum]) => {
+    if (typeof value !== 'string' || !value || value.startsWith('__SET_')) return [{field, reason:'not_set'}];
+    if (value.length < minimum) return [{field, reason:'too_short', minimum}];
+    if (maximum && value.length > maximum) return [{field, reason:'too_long', maximum}];
+    return [];
+  });
+}
 
 const securityHeaders = {
   'cache-control': 'no-store',
@@ -57,7 +70,8 @@ export function createApplication(config, { mcpHandler, now = () => Date.now() }
   const origin = new URL(base);
   if (origin.protocol !== 'https:' || origin.origin !== base) throw new Error('PUBLIC_URL must be an HTTPS origin');
   const resource = base + '/mcp';
-  const ready = validSecret(config.signingKey, 40) && validSecret(config.password, 16) && config.password.length <= 256 && validSecret(config.garminKey, 10);
+  const issues = configurationIssues(config);
+  const ready = issues.length === 0;
   const signingKey = new TextEncoder().encode(config.signingKey ?? '');
   const authVersion = createHmac('sha256', signingKey).update(`owner-password\0${config.password ?? ''}`).digest('base64url');
   const pending = new Map();
@@ -134,7 +148,8 @@ export function createApplication(config, { mcpHandler, now = () => Date.now() }
       if (request.headers.has('origin') && ![base, 'https://chatgpt.com'].includes(request.headers.get('origin'))) return json({ error:'invalid_origin' }, 403);
       const path = url.pathname;
       if (request.method === 'GET' && path === '/healthz') return json({ status:'running', configured:ready });
-      if (request.method === 'GET' && path === '/readyz') return json({ ready }, ready ? 200 : 503);
+      // Report field names and validation rules only, never secret values or their actual lengths.
+      if (request.method === 'GET' && path === '/readyz') return json({ ready, issues }, ready ? 200 : 503);
       if (request.method === 'GET' && path === '/') return page('Garmin Bartek', ready
         ? `<p>Połączenie Garmin jest skonfigurowane. Dodaj wtyczkę w ChatGPT, używając adresu:</p><p><code>${escape(resource)}</code></p><p>Wybierz logowanie OAuth i pozostaw pola Client ID oraz Client Secret puste. Zaloguj się hasłem ustawionym dla tej wtyczki.</p>`
         : '<p>Serwer jest uruchomiony. Dokończ konfigurację w panelu Render, wpisując klucz Garmin oraz hasło do tej wtyczki, a następnie wybierz „Save and deploy”.</p><p>Dostęp do danych pozostaje zablokowany do ukończenia konfiguracji.</p>');
